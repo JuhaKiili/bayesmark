@@ -222,20 +222,36 @@ def real_run(args, opt_file_lookup, run_uuid, timeout=None):  # pragma: io
     args[CmdArgs.db] = XRSerializer.init_db(args[CmdArgs.db_root], db=args[CmdArgs.db], keys=EXP_VARS, exist_ok=True)
     logger.info("Supply --db %s to append to this experiment or reproduce jobs file." % args[CmdArgs.db])
 
+    from subprocess import Popen
+
+    commands = []
+    # run in parallel
+    processes = [Popen(cmd, shell=True) for cmd in commands]
+    # do other things here..
+    # wait for completion
+    for p in processes: p.wait()
+
     # Get and run the commands in a sub-process
     counter = 0
     G = gen_commands(args, opt_file_lookup, run_uuid)
     for _, full_cmd in G:
-        try:
-            status = call(full_cmd, shell=False, cwd=args[CmdArgs.optimizer_root], timeout=timeout)
-            if status != 0:
-                raise ChildProcessError("status code %d returned from:\n%s" % (status, " ".join(full_cmd)))
-        except TimeoutExpired:
-            logger.info(f"Experiment timeout after {timeout} seconds.")
-            print(json.dumps({"experiment_timeout_exception": " ".join(full_cmd)}))
+        # try:
+        commands.append([full_cmd, args[CmdArgs.optimizer_root]])
+        #     status = call(full_cmd, shell=False, cwd=args[CmdArgs.optimizer_root], timeout=timeout)
+        #     if status != 0:
+        #         raise ChildProcessError("status code %d returned from:\n%s" % (status, " ".join(full_cmd)))
+        # except TimeoutExpired:
+        #     logger.info(f"Experiment timeout after {timeout} seconds.")
+        # print(json.dumps({"experiment_timeout_exception": " ".join(full_cmd)}))
 
-        counter += 1
-    logger.info(f"Benchmark script ran {counter} studies successfully.")
+    processes = [Popen(cmd[0], shell=True, cwd=cmd[1]) for cmd in commands]
+    # do other things here..
+    # wait for completion
+    for p in processes: p.wait()
+
+    #        counter += 1
+
+    # logger.info(f"Benchmark script ran {counter} studies successfully.")
 
 
 def main():
