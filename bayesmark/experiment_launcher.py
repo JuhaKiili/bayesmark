@@ -236,7 +236,7 @@ def real_run(args, opt_file_lookup, run_uuid, timeout=None):  # pragma: io
     G = gen_commands(args, opt_file_lookup, run_uuid)
     for _, full_cmd in G:
         # try:
-        commands.append([full_cmd, args[CmdArgs.optimizer_root]])
+        commands.append({"cmd": ' '.join(full_cmd), "cwd": args[CmdArgs.optimizer_root]})
         #     status = call(full_cmd, shell=False, cwd=args[CmdArgs.optimizer_root], timeout=timeout)
         #     if status != 0:
         #         raise ChildProcessError("status code %d returned from:\n%s" % (status, " ".join(full_cmd)))
@@ -244,10 +244,16 @@ def real_run(args, opt_file_lookup, run_uuid, timeout=None):  # pragma: io
         #     logger.info(f"Experiment timeout after {timeout} seconds.")
         # print(json.dumps({"experiment_timeout_exception": " ".join(full_cmd)}))
 
-    processes = [Popen(cmd[0], shell=True, cwd=cmd[1]) for cmd in commands]
+    print(commands)
+
+    processes = [Popen(cmd['cmd'], shell=True, cwd=cmd['cwd']) for cmd in commands]
     # do other things here..
     # wait for completion
-    for p in processes: p.wait()
+    for p in processes:
+        status = p.wait()
+        if status != 0:
+            print("status", status, p)
+            # raise ChildProcessError("status code %d returned from:\n%s" % (status, p))
 
     #        counter += 1
 
